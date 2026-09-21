@@ -19,9 +19,10 @@ This skill makes every acceptance criterion an **assertable statement**: a concr
 
 1. Receive a feature description from the user
 2. Ask 3–5 essential clarifying questions (with lettered options)
-3. Generate a structured PRD based on answers
-4. Save to `tasks/prd-[feature-name].md`
-5. Create a spec file in `specs/features/<category>/` (pick the right subdirectory — platform, foundation, marketplace, etc.) with `Status: planned` at the top. Add a row for it in `specs/README.md` under the matching section. The spec summarizes the feature's purpose, scope, data model changes, routes, and key decisions — so future agents can see what's planned/built at a glance without reading code.
+3. **UI change? Publish a Claude Artifact with 2–3 layout/style options and let the user pick one** (see Step 1b)
+4. Generate a structured PRD based on answers — embed the chosen artifact URL in it
+5. Save to `tasks/prd-[feature-name].md`
+6. Create a spec file in `specs/features/<category>/` (pick the right subdirectory — platform, foundation, marketplace, etc.) with `Status: planned` at the top. Add a row for it in `specs/README.md` under the matching section. The spec summarizes the feature's purpose, scope, data model changes, routes, and key decisions — so future agents can see what's planned/built at a glance without reading code.
 
 **Do NOT start implementing. Just create the PRD.**
 
@@ -59,6 +60,46 @@ Format with lettered options so the user can reply "1A, 2C, 3B":
 ```
 
 Skip questions the initial prompt already answers clearly.
+
+---
+
+## Step 1b: UI prototype artifact (any feature with a visible UI)
+
+If the feature adds or changes a page, panel, card, table, modal or form, do **not** describe
+the UI in prose and hope. Build it first, let the user look at it, let the user pick.
+
+1. Publish **one** Claude Artifact (the `Artifact` tool) containing **2–3 variants** — A / B / C —
+   of the screen or component, labelled and stacked on one page.
+2. Use the project's real design language: read `DESIGN.md` and `resources/js/lib/design-tokens.ts`,
+   match existing pages' typography, spacing, card style, badges, empty states. Never invent a new look.
+3. Use **realistic copy and realistic data** — the headings, labels and numbers you actually
+   intend to ship. The artifact is the visual contract; vague lorem text makes it worthless.
+4. **Show every state the screen can be in**, not just the happy one. A screenshot of one
+   populated table is not a design — most bugs live in the states nobody drew. Draw each
+   state that applies to this feature, labelled, on the same page:
+   - **empty** — first use, nothing created yet (and the empty state's CTA)
+   - **populated** — realistic full data
+   - **sparse** — one or two rows; does the layout still hold?
+   - **filtered / searched** — filters active, including a filter that returns **zero** results
+   - **loading** — skeleton or spinner as the project actually does it
+   - **error** — failed load, failed save, validation errors on the form
+   - **long content** — long titles, long names, overflow/truncation
+   - **permission / plan variants** — locked, upsell, read-only, quota exceeded, if they exist
+   - **pagination** — page 1 vs a later page, when the list paginates
+   Skip the ones that can't happen for this feature, and say in one line which you skipped
+   and why. When the state count gets large, show all states for the chosen layout and keep
+   the A/B/C comparison to the populated state.
+5. Give the user the link and ask which variant (`A`, `B`, `C`) — one line, no essay.
+6. Record the pick in the PRD under **Design Considerations**:
+   - the artifact URL
+   - the chosen variant letter
+   - any tweaks the user asked for on top of it
+
+The chosen variant is now **binding**: the implementation must match its layout, type scale,
+spacing, colors and copy. "Close enough" is a defect — the user picked what they picked.
+
+If the user says skip the artifact, skip it and note "design: no prototype (user skipped)"
+in the PRD.
 
 ---
 
@@ -101,8 +142,14 @@ Be explicit and unambiguous. Implementation plans reference these by number.
 ### 5. Non-Goals (Out of Scope)
 What this feature will NOT include. Critical for managing scope creep.
 
-### 6. Design Considerations (optional)
-UI/UX requirements, mockups, existing components to reuse.
+### 6. Design Considerations
+For any UI feature this is **not optional** — it must contain:
+- **Prototype artifact:** `<url>` — **chosen variant: B** (or "no prototype (user skipped)")
+- Tweaks requested on top of the chosen variant
+- Existing components to reuse
+
+The chosen variant is the visual spec. Implementation is verified against it (see the
+visual-parity criterion below).
 
 ### 7. Technical Considerations (optional)
 Known constraints, integration points, performance requirements.
@@ -182,10 +229,13 @@ Task::factory()->count(2)->for(Organization::find(3))->create(['priority' => 'hi
       DOM asserted, zero console errors, network 2xx
 - [ ] Full happy-path walkthrough: start to finish with the seeded data
 - [ ] Screenshot captured for visual changes (layout, new components, modals)
+- [ ] **Visual parity**: implemented screen screenshotted next to the chosen prototype variant;
+      section order, copy, type scale, spacing, colors and empty states each reported as
+      matching or differing (N/A if no prototype)
 
 ### Suite gates
 
-- [ ] `php artisan test` passes (whole-app regression net)
+- [ ] Targeted `php artisan test <files>` passes (changed areas + new tests); full suite only once, before push to master
 - [ ] `npm run test` (Vitest) passes
 - [ ] `npm run types` passes
 - [ ] `npm run lint` passes
@@ -275,6 +325,25 @@ For every `[browser]` criterion, dev-browser follows this order. **The assertion
 3. **Assert no console errors** — catches JS exceptions Inertia swallows.
 4. **Assert network outcome** — the mutation returned 2xx and landed on the expected URL.
 5. **Screenshot — only if the criterion is visual** (chart, layout, modal). One screenshot at the milestone, not one per click.
+6. **Compare against the prototype artifact** (when one exists) — see below.
+
+### Visual parity against the artifact
+
+Every screen that had a prototype gets one `[browser]` parity criterion:
+
+> `[browser]` `/tasks` at 1440px matches prototype variant B: same section order, same
+> headings/copy, same type scale and card style, same empty state.
+
+How to check it:
+
+1. Screenshot the implemented page in dev-browser at the same viewport width as the artifact.
+2. Open the artifact URL in dev-browser and screenshot the chosen variant at the same width.
+3. Put the two side by side and walk a fixed list: **section order → headings and copy →
+   font sizes/weights → spacing and card treatment → colors/badges → empty and loading states.**
+4. Report every difference explicitly. A screenshot that "looks right" is not the check —
+   naming each item as matching or differing is.
+5. Fix the implementation to match, or, if the artifact was wrong, say so and get the user's call.
+   Never silently redesign away from the approved variant.
 
 ---
 
@@ -299,6 +368,9 @@ The PRD reader may be an AI agent or junior developer. Therefore:
 - [ ] Every criterion is **tagged** with a verification layer (`[feature]` / `[unit]` / `[vitest]` / `[browser]`).
 - [ ] The bulk is `[feature]` / `[vitest]`; `[browser]` is reserved for real click-paths + visual checks.
 - [ ] Tenant-data features include explicit `[feature]` **org-scoping** criteria.
+- [ ] UI feature → prototype artifact published with 2–3 variants, user picked one, URL + variant letter recorded in Design Considerations (or explicitly skipped by the user).
+- [ ] Prototype artifact shows **every applicable state** (empty, populated, sparse, filtered incl. zero-result, loading, error, long content, permission/plan, pagination) — skipped ones named with a reason.
+- [ ] Each screen with a prototype has a `[browser]` **visual parity** criterion naming the artifact URL and variant.
 - [ ] Each user story has a `Verification` block (tests to add, dev-browser flow, regression risk).
 - [ ] Functional Requirements are numbered (FR-N) and referenceable.
 - [ ] Non-Goals section defines clear scope boundaries.
@@ -464,7 +536,7 @@ Task::factory()->count(2)->for(Organization::find(3))->create(['priority' => 'hi
 
 ### Suite gates
 
-- [ ] `php artisan test` passes
+- [ ] Targeted `php artisan test <files>` passes; full suite only once, before push to master
 - [ ] `npm run test` (Vitest) passes
 - [ ] `npm run types` passes
 - [ ] `npm run lint` passes
