@@ -68,15 +68,31 @@ Skip questions the initial prompt already answers clearly.
 If the feature adds or changes a page, panel, card, table, modal or form, do **not** describe
 the UI in prose and hope. Build it first, let the user look at it, let the user pick.
 
-1. Publish **one** Claude Artifact (the `Artifact` tool) containing **2–3 variants** — A / B / C —
-   of the screen or component, labelled and stacked on one page.
-2. Use the project's real design language: read `DESIGN.md` and `resources/js/lib/design-tokens.ts`,
+1. Create **one** artifact from the **Design** Artifact type (`Artifact` tool: `action: "quickstart"`
+   with `intent: "design"`, then publish with that type's `type_url` and follow its instructions),
+   with **2–3 variants** — A / B / C — of the screen or component as labelled artboards on the canvas.
+   Not a plain HTML page. If an artifact for this feature already exists (linked in the ticket,
+   PRD or chat), update that same URL — never publish a second artifact for the same feature.
+   This applies to **every** user-facing surface, not just pages: emails, multi-step flows,
+   onboarding steps and notifications get designed artboards too, with real visuals (logos,
+   screenshots, charts, illustrations) — people are visual readers, a wall of text is not a design.
+2. **No fluff.** Each screen has one main action, options only when the user truly has to choose,
+   and a clear visual that explains the point. Cut extra copy, badges, secondary buttons and
+   side panels until removing one more thing would lose meaning. Limit choice: 2 cards + a
+   picker beats 5 options.
+3. **Real logos.** Wherever a third-party platform or provider is named (connect buttons, cards,
+   empty states, emails), show its real logo from `public/images/integrations/` — never a
+   generic Lucide icon. Missing logo → fetch it per `docs/integration_development_guideline.md`.
+4. **Simple enough for a 5-year-old.** Every state must say in plain words what happened and what
+   to do next, using the user's own data (their domain, their platform, their numbers) to make
+   it concrete. No jargon, no unexplained metrics.
+5. Use the project's real design language: read `DESIGN.md` and `resources/js/lib/design-tokens.ts`,
    match existing pages' typography, spacing, card style, badges, empty states. Never invent a new look.
-3. Use **realistic copy and realistic data** — the headings, labels and numbers you actually
+6. Use **realistic copy and realistic data** — the headings, labels and numbers you actually
    intend to ship. The artifact is the visual contract; vague lorem text makes it worthless.
-4. **Show every state the screen can be in**, not just the happy one. A screenshot of one
+7. **Show every state the screen can be in**, not just the happy one. A screenshot of one
    populated table is not a design — most bugs live in the states nobody drew. Draw each
-   state that applies to this feature, labelled, on the same page:
+   state that applies to this feature as its own labelled artboard on the same canvas:
    - **empty** — first use, nothing created yet (and the empty state's CTA)
    - **populated** — realistic full data
    - **sparse** — one or two rows; does the layout still hold?
@@ -89,14 +105,21 @@ the UI in prose and hope. Build it first, let the user look at it, let the user 
    Skip the ones that can't happen for this feature, and say in one line which you skipped
    and why. When the state count gets large, show all states for the chosen layout and keep
    the A/B/C comparison to the populated state.
-5. Give the user the link and ask which variant (`A`, `B`, `C`) — one line, no essay.
-6. Record the pick in the PRD under **Design Considerations**:
+8. Give the user the link and ask which variant (`A`, `B`, `C`) — one line, no essay.
+9. **After the pick, immediately draw every applicable state for the chosen variant** in the same
+   artifact — don't wait for the user to ask. Then share the link again.
+10. Record the pick in the PRD under **Design Considerations**:
    - the artifact URL
    - the chosen variant letter
    - any tweaks the user asked for on top of it
 
 The chosen variant is now **binding**: the implementation must match its layout, type scale,
 spacing, colors and copy. "Close enough" is a defect — the user picked what they picked.
+
+**Builders read the artboards first.** Before writing any UI code, the implementer opens the
+artifact (`Artifact` tool: `list` with scope `files`, then `read` each artboard) and matches
+structure, section order, copy and type scale. PRD prose pins the strings; the artboards pin the
+layout. Building from the prose alone gets rejected.
 
 If the user says skip the artifact, skip it and note "design: no prototype (user skipped)"
 in the PRD.
@@ -369,6 +392,7 @@ The PRD reader may be an AI agent or junior developer. Therefore:
 - [ ] The bulk is `[feature]` / `[vitest]`; `[browser]` is reserved for real click-paths + visual checks.
 - [ ] Tenant-data features include explicit `[feature]` **org-scoping** criteria.
 - [ ] UI feature → prototype artifact published with 2–3 variants, user picked one, URL + variant letter recorded in Design Considerations (or explicitly skipped by the user).
+- [ ] Artifact screens are fluff-free (one main action, real logos, plain-words copy using the user's data); emails/flows designed too; one artifact URL per feature.
 - [ ] Prototype artifact shows **every applicable state** (empty, populated, sparse, filtered incl. zero-result, loading, error, long content, permission/plan, pagination) — skipped ones named with a reason.
 - [ ] Each screen with a prototype has a `[browser]` **visual parity** criterion naming the artifact URL and variant.
 - [ ] Each user story has a `Verification` block (tests to add, dev-browser flow, regression risk).
